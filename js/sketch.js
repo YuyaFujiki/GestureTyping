@@ -1,32 +1,82 @@
-// ジェスチャーの種類てすと
-// 👍(Thumb_Up), 👎(Thumb_Down), ✌️(Victory), 
-// ☝️(Pointng_Up), ✊(Closed_Fist), 👋(Open_Palm), 
-// 🤟(ILoveYou)
-function getCode(left_gesture, right_gesture) {
-  let code_array = {
-    "Thumb_Up": 1,
-    "Thumb_Down": 2,
-    "Victory": 3,
-    "Pointing_Up": 4,
-    "Closed_Fist": 5,
-    "Open_Palm": 6,
+function getHandPosition(landmarks) {
+  if (!landmarks || landmarks.length === 0) {
+    return "";
   }
-  let left_code = code_array[left_gesture];
-  let right_code = code_array[right_gesture];
-  // left_codeとright_codeを文字として結合
-  let code = String(left_code) + String(right_code);
-  return code;
+
+  let sumY = 0;
+  for (const landmark of landmarks) {
+    sumY += landmark.y;
+  }
+
+  const centerY = sumY / landmarks.length;
+  if (centerY < 1 / 3) {
+    return "top";
+  }
+  if (centerY < 2 / 3) {
+    return "middle";
+  }
+  return "bottom";
 }
 
-function getCharacter(code) {
-  const codeToChar = {
-    "11": "a", "12": "b", "13": "c", "14": "d", "15": "e", "16": "f",
-    "21": "g", "22": "h", "23": "i", "24": "j", "25": "k", "26": "l",
-    "31": "m", "32": "n", "33": "o", "34": "p", "35": "q", "36": "r",
-    "41": "s", "42": "t", "43": "u", "44": "v", "45": "w", "46": "x",
-    "51": "y", "52": "z", "53": " ", "54": "backspace"
+function getMappedCharacter(handedness, gesture, landmarks) {
+  const position = getHandPosition(landmarks);
+  const table = {
+    Left: {
+      oya: { top: "t", middle: "g", bottom: "b" },
+      hito: { top: "r", middle: "f", bottom: "v" },
+      naka: { top: "e", middle: "d", bottom: "c" },
+      kusu: { top: "w", middle: "s", bottom: "x" },
+      ko: { top: "q", middle: "a", bottom: "z" },
+    },
+    Right: {
+      oya: { top: "y", middle: "h", bottom: "n" },
+      hito: { top: "u", middle: "j", bottom: "m" },
+      naka: { top: "i", middle: "k", bottom: "" },
+      kusu: { top: "o", middle: "l", bottom: "" },
+      ko: { top: "p", middle: " ", bottom: "backspace" },
+    },
   };
-  return codeToChar[code] || "";
+
+  if (!table[handedness] || !table[handedness][gesture] || !position) {
+    return "";
+  }
+
+  return table[handedness][gesture][position] || "";
+}
+
+function getCharacter(results) {
+  const handednesses = results.handednesses || results.handedness || [];
+
+  if (results.gestures.length < 2 || handednesses.length < 2 || results.landmarks.length < 2) {
+    return "";
+  }
+
+  const hands = results.gestures.map((gestureList, index) => {
+    const handedness = handednesses[index]?.[0]?.categoryName || "";
+    const gesture = gestureList?.[0]?.categoryName || "";
+    const score = gestureList?.[0]?.score || 0;
+    const landmarks = results.landmarks[index] || [];
+
+    return {
+      handedness,
+      gesture,
+      score,
+      character: getMappedCharacter(handedness, gesture, landmarks),
+    };
+  });
+
+  const leftHand = hands.find((hand) => hand.handedness === "Left");
+  const rightHand = hands.find((hand) => hand.handedness === "Right");
+
+  if (leftHand?.gesture === "oya" && rightHand?.gesture === "oya") {
+    return "";
+  }
+
+  const candidates = hands
+    .filter((hand) => hand.character)
+    .sort((a, b) => b.score - a.score);
+
+  return candidates[0]?.character || "";
 }
 
 // 入力サンプル文章 
@@ -55,8 +105,17 @@ function setup() {
   p5canvas.parent('#canvas');
 
   // When gestures are found, the following function is called. The detection results are stored in results.
-  let lastChar = "";
-  let lastCharTime = millis();
+  let lastCommittedSignature = "";
+  let stableGestureSignature = "";
+  let stableGestureCount = 0;
+  let lastInputTime = 0;
+  const inputIntervalMs = 180;
+  const stableFrameThreshold = 2;
+
+  function resetGestureTracking() {
+    stableGestureSignature = "";
+    stableGestureCount = 0;
+  }
 
   gotGestures = function (results) {
     gestures_results = results;
@@ -68,29 +127,44 @@ function setup() {
         game_mode.now = "playing";
         document.querySelector('input').value = ""; // 入力欄をクリア
         game_start_time = millis(); // ゲーム開始時間を記録
+        lastCommittedSignature = "";
+        lastInputTime = 0;
+        resetGestureTracking();
       }
-      let left_gesture;
-      let right_gesture;
-      if (results.handedness[0][0].categoryName == "Left") {
-        left_gesture = results.gestures[0][0].categoryName;
-        right_gesture = results.gestures[1][0].categoryName;
-      } else {
-        left_gesture = results.gestures[1][0].categoryName;
-        right_gesture = results.gestures[0][0].categoryName;
+      const handednesses = results.handednesses || results.handedness || [];
+      const leftHandIndex = handednesses.findIndex((handedness) => handedness?.[0]?.categoryName === "Left");
+      const rightHandIndex = handednesses.findIndex((handedness) => handedness?.[0]?.categoryName === "Right");
+      const leftGesture = leftHandIndex >= 0 ? (results.gestures[leftHandIndex]?.[0]?.categoryName || "") : "";
+      const rightGesture = rightHandIndex >= 0 ? (results.gestures[rightHandIndex]?.[0]?.categoryName || "") : "";
+
+      if (!leftGesture || !rightGesture) {
+        resetGestureTracking();
+        return;
       }
-      let code = getCode(left_gesture, right_gesture);
-      let c = getCharacter(code);
+
+      const signature = `${leftGesture}|${rightGesture}`;
+      let c = getCharacter(results);
 
       let now = millis();
-      if (c === lastChar) {
-        if (now - lastCharTime > 1000) {
-          // 1秒以上cが同じ値である場合の処理
-          typeChar(c);
-          lastCharTime = now;
-        }
-      } else {
-        lastChar = c;
-        lastCharTime = now;
+      if (signature !== stableGestureSignature) {
+        stableGestureSignature = signature;
+        stableGestureCount = 1;
+        return;
+      }
+
+      stableGestureCount += 1;
+      if (stableGestureCount < stableFrameThreshold) {
+        return;
+      }
+
+      if (signature === lastCommittedSignature) {
+        return;
+      }
+
+      if (now - lastInputTime > inputIntervalMs) {
+        typeChar(c);
+        lastCommittedSignature = signature;
+        lastInputTime = now;
       }
     }
 
@@ -187,7 +261,11 @@ function startWebcam() {
 function draw() {
   background(127);
   if (cam) {
+    push();
+    translate(width, 0);
+    scale(-1, 1);
     image(cam, 0, 0, width, height);
+    pop();
   }
   // 各頂点座標を表示する
   // 各頂点座標の位置と番号の対応は以下のURLを確認
@@ -198,7 +276,7 @@ function draw() {
         for (let landmark of landmarks) {
           noStroke();
           fill(100, 150, 210);
-          circle(landmark.x * width, landmark.y * height, 10);
+          circle(width - (landmark.x * width), landmark.y * height, 10);
         }
       }
     }
@@ -212,7 +290,7 @@ function draw() {
       let score = gestures_results.gestures[i][0].score;
       let right_or_left = gestures_results.handednesses[i][0].hand;
       let pos = {
-        x: gestures_results.landmarks[i][0].x * width,
+        x: width - (gestures_results.landmarks[i][0].x * width),
         y: gestures_results.landmarks[i][0].y * height,
       };
       textSize(20);
