@@ -1,4 +1,4 @@
-// ジェスチャーの種類testtest
+// ジェスチャーの種類てすと
 // 👍(Thumb_Up), 👎(Thumb_Down), ✌️(Victory), 
 // ☝️(Pointng_Up), ✊(Closed_Fist), 👋(Open_Palm), 
 // 🤟(ILoveYou)
