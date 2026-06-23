@@ -122,6 +122,20 @@ function setup() {
   gotGestures = function (results) {
     gestures_results = results;
 
+    // 手のエリア位置をMediaPipe検出と同時にパネルへ即反映
+    {
+      let leftPos = '';
+      let rightPos = '';
+      const handednesses = results.handednesses || results.handedness || [];
+      for (let i = 0; i < handednesses.length; i++) {
+        const side = handednesses[i]?.[0]?.categoryName;
+        const pos = getHandPosition(results.landmarks?.[i]);
+        if (side === 'Left') leftPos = pos;
+        if (side === 'Right') rightPos = pos;
+      }
+      updateHandPositionPanel(leftPos, rightPos);
+    }
+
     if (results.gestures.length == 2) {
       if (game_mode.now == "ready" && game_mode.previous == "notready") {
         // ゲーム開始前の状態から、カメラが起動した後の状態に変化した場合
@@ -263,8 +277,28 @@ function startWebcam() {
 }
 
 
+// 手のエリア位置をHTMLパネルに反映する関数（上中下を色ハイライト）
+function updateHandPositionPanel(leftPos, rightPos) {
+  const sides = [
+    { prefix: 'left', pos: leftPos },
+    { prefix: 'right', pos: rightPos },
+  ];
+  const zones = ['top', 'middle', 'bottom'];
+  for (const { prefix, pos } of sides) {
+    for (const zone of zones) {
+      const el = document.getElementById(`${prefix}-${zone}`);
+      if (!el) continue;
+      el.classList.remove('active-top', 'active-middle', 'active-bottom');
+      if (pos === zone) {
+        el.classList.add(`active-${zone}`);
+      }
+    }
+  }
+}
+
 function draw() {
   background(127);
+
   if (cam) {
     push();
     translate(width, 0);

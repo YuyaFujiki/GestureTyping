@@ -16,7 +16,7 @@
 
 
   <body>
-    <div class="container-sm">
+    <div class="container-lg">
       <div class="row mb-2">
         <div class="col-12 text-center">
           <h1 class="display-1 mt-5 mb-4">
@@ -27,15 +27,116 @@
           </button>
         </div>
       </div>
+      <!-- カメラ映像 + 両脇に手のエリアパネル -->
       <div class="row">
-        <div class="col-12 text-center">
-          <div id="canvas"></div>
+        <div class="col-12">
+          <div style="display: flex; align-items: stretch; justify-content: center; gap: 12px;">
+
+            <!-- 左手パネル -->
+            <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 80px; width: 80px;">
+              <div style="font-size: 0.95em; font-weight: bold; text-align: center; color: #444; margin-bottom: 4px;">左手</div>
+              <div id="left-top" class="zone-btn" style="
+                padding: 0;
+                border-radius: 8px;
+                text-align: center;
+                font-size: 1.3em;
+                font-weight: bold;
+                background: #e0f2fe;
+                color: #0369a1;
+                border: 3px solid #bae6fd;
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">上</div>
+              <div id="left-middle" class="zone-btn" style="
+                padding: 0;
+                border-radius: 8px;
+                text-align: center;
+                font-size: 1.3em;
+                font-weight: bold;
+                background: #fef9c3;
+                color: #854d0e;
+                border: 3px solid #fde047;
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">中</div>
+              <div id="left-bottom" class="zone-btn" style="
+                padding: 0;
+                border-radius: 8px;
+                text-align: center;
+                font-size: 1.3em;
+                font-weight: bold;
+                background: #f3e8ff;
+                color: #6b21a8;
+                border: 3px solid #d8b4fe;
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">下</div>
+            </div>
+
+            <!-- カメラ映像 -->
+            <div id="canvas" style="flex: 1; min-width: 0;"></div>
+
+            <!-- 右手パネル -->
+            <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; min-width: 80px; width: 80px;">
+              <div style="font-size: 0.95em; font-weight: bold; text-align: center; color: #444; margin-bottom: 4px;">右手</div>
+              <div id="right-top" class="zone-btn" style="
+                padding: 0;
+                border-radius: 8px;
+                text-align: center;
+                font-size: 1.3em;
+                font-weight: bold;
+                background: #e0f2fe;
+                color: #0369a1;
+                border: 3px solid #bae6fd;
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">上</div>
+              <div id="right-middle" class="zone-btn" style="
+                padding: 0;
+                border-radius: 8px;
+                text-align: center;
+                font-size: 1.3em;
+                font-weight: bold;
+                background: #fef9c3;
+                color: #854d0e;
+                border: 3px solid #fde047;
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">中</div>
+              <div id="right-bottom" class="zone-btn" style="
+                padding: 0;
+                border-radius: 8px;
+                text-align: center;
+                font-size: 1.3em;
+                font-weight: bold;
+                background: #f3e8ff;
+                color: #6b21a8;
+                border: 3px solid #d8b4fe;
+                flex: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">下</div>
+            </div>
+
+          </div>
         </div>
+
+        <!-- テキスト入力カード -->
         <div class="col-12 text-center">
           <div class="card mt-2">
             <div class="card-header">
-              <h5 class="card-title">
-              </h5>
+              <h5 class="card-title"></h5>
               <h5 id="message" class="card-subtitle mb-2 fw-bold">
                 Press the start button to begin the challenge
               </h5>
@@ -44,9 +145,26 @@
               <input type="text" style="font-size:1.5em; padding:0.5em;" class="form-control" value="">
             </div>
           </div>
-
         </div>
       </div>
+
+      <style>
+        .zone-btn.active-top {
+          background: #0ea5e9 !important;
+          color: #fff !important;
+          border-color: #0369a1 !important;
+        }
+        .zone-btn.active-middle {
+          background: #facc15 !important;
+          color: #78350f !important;
+          border-color: #ca8a04 !important;
+        }
+        .zone-btn.active-bottom {
+          background: #a855f7 !important;
+          color: #fff !important;
+          border-color: #7e22ce !important;
+        }
+      </style>
 
 
       <!-- include js libraries -->
