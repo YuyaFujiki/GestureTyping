@@ -110,7 +110,9 @@ function setup() {
   let stableGestureCount = 0;
   let lastInputTime = 0;
   const inputIntervalMs = 180;
+  const kusuInputIntervalMs = 90;
   const stableFrameThreshold = 2;
+  const kusuStableFrameThreshold = 1;
 
   function resetGestureTracking() {
     stableGestureSignature = "";
@@ -136,6 +138,9 @@ function setup() {
       const rightHandIndex = handednesses.findIndex((handedness) => handedness?.[0]?.categoryName === "Right");
       const leftGesture = leftHandIndex >= 0 ? (results.gestures[leftHandIndex]?.[0]?.categoryName || "") : "";
       const rightGesture = rightHandIndex >= 0 ? (results.gestures[rightHandIndex]?.[0]?.categoryName || "") : "";
+      const isKusuGesture = leftGesture === "kusu" || rightGesture === "kusu";
+      const effectiveInputIntervalMs = isKusuGesture ? kusuInputIntervalMs : inputIntervalMs;
+      const effectiveStableFrameThreshold = isKusuGesture ? kusuStableFrameThreshold : stableFrameThreshold;
 
       if (!leftGesture || !rightGesture) {
         resetGestureTracking();
@@ -153,7 +158,7 @@ function setup() {
       }
 
       stableGestureCount += 1;
-      if (stableGestureCount < stableFrameThreshold) {
+      if (stableGestureCount < effectiveStableFrameThreshold) {
         return;
       }
 
@@ -161,7 +166,7 @@ function setup() {
         return;
       }
 
-      if (now - lastInputTime > inputIntervalMs) {
+      if (now - lastInputTime > effectiveInputIntervalMs) {
         typeChar(c);
         lastCommittedSignature = signature;
         lastInputTime = now;
