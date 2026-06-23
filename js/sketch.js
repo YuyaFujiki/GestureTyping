@@ -109,10 +109,14 @@ function setup() {
   let stableGestureSignature = "";
   let stableGestureCount = 0;
   let lastInputTime = 0;
+  let lastGestureLabelPair = { left: "", right: "" };
   const inputIntervalMs = 180;
   const kusuInputIntervalMs = 90;
   const stableFrameThreshold = 2;
   const kusuStableFrameThreshold = 1;
+  const kusuPreferenceWindowMs = 350;
+
+  let kusuPreferredUntil = 0;
 
   function resetGestureTracking() {
     stableGestureSignature = "";
@@ -131,6 +135,8 @@ function setup() {
         game_start_time = millis(); // ゲーム開始時間を記録
         lastCommittedSignature = "";
         lastInputTime = 0;
+        lastGestureLabelPair = { left: "" , right: "" };
+        kusuPreferredUntil = 0;
         resetGestureTracking();
       }
       const handednesses = results.handednesses || results.handedness || [];
@@ -139,8 +145,19 @@ function setup() {
       const leftGesture = leftHandIndex >= 0 ? (results.gestures[leftHandIndex]?.[0]?.categoryName || "") : "";
       const rightGesture = rightHandIndex >= 0 ? (results.gestures[rightHandIndex]?.[0]?.categoryName || "") : "";
       const isKusuGesture = leftGesture === "kusu" || rightGesture === "kusu";
-      const effectiveInputIntervalMs = isKusuGesture ? kusuInputIntervalMs : inputIntervalMs;
-      const effectiveStableFrameThreshold = isKusuGesture ? kusuStableFrameThreshold : stableFrameThreshold;
+      const wasRecentlyKusu = now => now < kusuPreferredUntil;
+      const isKusuSwitch = (
+        (leftGesture === "kusu" && lastGestureLabelPair.left === "naka") ||
+        (rightGesture === "kusu" && lastGestureLabelPair.right === "naka") ||
+        (leftGesture === "naka" && lastGestureLabelPair.left === "kusu") ||
+        (rightGesture === "naka" && lastGestureLabelPair.right === "kusu")
+      );
+      if (isKusuSwitch && (isKusuGesture || wasRecentlyKusu(millis()))) {
+        kusuPreferredUntil = millis() + kusuPreferenceWindowMs;
+      }
+      const shouldPreferKusu = isKusuGesture || wasRecentlyKusu(millis());
+      const effectiveInputIntervalMs = shouldPreferKusu ? kusuInputIntervalMs : inputIntervalMs;
+      const effectiveStableFrameThreshold = shouldPreferKusu ? kusuStableFrameThreshold : stableFrameThreshold;
 
       if (!leftGesture || !rightGesture) {
         resetGestureTracking();
@@ -170,6 +187,7 @@ function setup() {
         typeChar(c);
         lastCommittedSignature = signature;
         lastInputTime = now;
+        lastGestureLabelPair = { left: leftGesture, right: rightGesture };
       }
     }
 
