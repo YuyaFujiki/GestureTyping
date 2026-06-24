@@ -47,7 +47,7 @@ function getMappedCharacter(handedness, gesture, landmarks) {
 function getCharacter(results) {
   const handednesses = results.handednesses || results.handedness || [];
 
-  if (results.gestures.length < 2 || handednesses.length < 2 || results.landmarks.length < 2) {
+  if (results.gestures.length < 1 || handednesses.length < 1 || results.landmarks.length < 1) {
     return "";
   }
 
@@ -136,7 +136,7 @@ function setup() {
       updateHandPositionPanel(leftPos, rightPos);
     }
 
-    if (results.gestures.length == 2) {
+    if (results.gestures.length >= 1) {
       if (game_mode.now == "ready" && game_mode.previous == "notready") {
         // ゲーム開始前の状態から、カメラが起動した後の状態に変化した場合
         game_mode.previous = game_mode.now;
@@ -156,12 +156,14 @@ function setup() {
       const effectiveInputIntervalMs = isKusuGesture ? kusuInputIntervalMs : inputIntervalMs;
       const effectiveStableFrameThreshold = isKusuGesture ? kusuStableFrameThreshold : stableFrameThreshold;
 
-      if (!leftGesture || !rightGesture) {
+      // 両手とも検出されていないフレームはリセット
+      if (!leftGesture && !rightGesture) {
         resetGestureTracking();
         return;
       }
 
-      const signature = `${leftGesture}|${rightGesture}`;
+      // 検出されている手だけでsignatureを作る（片手の場合は "none" を補う）
+      const signature = `${leftGesture || 'none'}|${rightGesture || 'none'}`;
       let c = getCharacter(results);
 
       let now = millis();
